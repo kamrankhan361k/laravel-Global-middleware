@@ -1,61 +1,150 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📝 Laravel One-Time Form Submission (with Middleware)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This is a simple **Laravel project** that demonstrates how to use **Middleware** to restrict a form so it can only be submitted **once**.  
+If the form is already filled, the user cannot go back and fill it again — they will see an "Already Filled" message.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Features
+- Laravel 10 project
+- Blade-based form view
+- Middleware (`CheckFormFilled`) to restrict multiple submissions
+- Controller for handling form logic
+- Validation with unique email
+- Stores data in MySQL database
+- Simple UI with **form → thank you → already filled**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ⚙️ Installation
 
-## Learning Laravel
+1. Clone the repo or create a fresh Laravel project:
+   ```bash
+   composer create-project laravel/laravel one-time-form
+   cd one-time-form
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+2. Configure your `.env` file with database credentials.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+3. Run migration to create table:
+   ```bash
+   php artisan migrate
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+4. Serve the project:
+   ```bash
+   php artisan serve
+   ```
 
-## Laravel Sponsors
+5. Open in browser:
+   ```
+   http://127.0.0.1:8000
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## 🗂️ Project Structure
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```
+app/
+ ├── Http/
+ │    ├── Controllers/
+ │    │     └── FormController.php
+ │    ├── Middleware/
+ │    │     └── CheckFormFilled.php
+database/
+ └── migrations/
+      └── create_user_forms_table.php
+resources/
+ └── views/
+      ├── form.blade.php
+      ├── thankyou.blade.php
+      └── already-filled.blade.php
+routes/
+ └── web.php
+```
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🔑 Core Logic
 
-## Code of Conduct
+### 1. Form Controller
+Handles showing, validating, and saving the form.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```php
+public function submitForm(Request $request)
+{
+    $request->validate([
+        'name'  => 'required',
+        'email' => 'required|email|unique:user_forms,email',
+    ]);
 
-## Security Vulnerabilities
+    UserForm::create($request->only('name', 'email'));
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    session(['email' => $request->email]);
 
-## License
+    return redirect()->route('form.thankyou');
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 2. Middleware (`CheckFormFilled`)
+Prevents users from accessing the form if they already submitted it.
+
+```php
+public function handle(Request $request, Closure $next)
+{
+    if (session()->has('email')) {
+        $email = session('email');
+
+        if (UserForm::where('email', $email)->exists()) {
+            return response()->view('already-filled');
+        }
+    }
+
+    return $next($request);
+}
+```
+
+### 3. Routes
+Apply middleware only to the form route.
+
+```php
+Route::get('/', [FormController::class, 'showForm'])
+    ->middleware('check.form')
+    ->name('form.show');
+```
+
+---
+
+## 🌍 What is Global Middleware?
+
+- **Global Middleware** runs on **every request** in your Laravel app.
+  - Example: Adding security headers, logging, forcing HTTPS, trimming strings.
+  - Registered in `app/Http/Kernel.php` under `$middleware`.
+
+Example:
+```php
+protected $middleware = [
+    \App\Http\Middleware\AddGlobalHeader::class,
+];
+```
+
+- **Route Middleware** runs only on **specific routes** when applied.
+  - In this project, we used `check.form` only for `/` route so the form can’t be refilled.
+
+---
+
+## ✅ Demo Flow
+
+1. Visit `/` → Fill form → Submit  
+2. Redirects to **Thank You** page  
+3. Try going back to `/` → You’ll see **Already Filled** page  
+4. Prevents duplicate submissions 🎉
+
+---
+
+## 📌 Notes
+- This project uses **session + DB check** to restrict access.  
+- You can upgrade it to **per-authenticated user** by replacing session with `Auth::user()->id`.
+
+---

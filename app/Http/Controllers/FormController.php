@@ -13,17 +13,17 @@ class FormController extends Controller
 
     public function submitForm(Request $request)
     {
-        $request->validate([
-            'name'  => 'required',
-            'email' => 'required|email|unique:user_forms,email',
-        ]);
+      $request->validate([
+        'name'  => 'required',
+        'email' => 'required|email|unique:user_forms,email',
+    ]);
 
-        UserForm::create($request->only('name', 'email'));
+    UserForm::create($request->only('name', 'email'));
 
         // Save email in session to prevent refill
-        session(['email' => $request->email]);
+    session(['email' => $request->email]);
 
-        return redirect()->route('form.thankyou');
+    return redirect()->route('form.thankyou');
     }
 
     public function thankyou()

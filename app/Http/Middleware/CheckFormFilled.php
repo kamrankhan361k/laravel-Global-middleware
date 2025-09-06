@@ -8,7 +8,7 @@ use App\Models\UserForm;
 
 class CheckFormFilled
 {
-    public function handle(Request $request, Closure $next)
+   public function handle(Request $request, Closure $next)
     {
         // Example: We check if this user already filled the form using email in session
         if (session()->has('email')) {
